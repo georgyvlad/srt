@@ -1,4 +1,4 @@
-The SRTEditor is set of web-based tools for handling SRT (movie subtitles) files.
+The SRT Editor is a set of web-based tools for handling SRT (movie subtitles) files.
 
 The "diff" utility lets users look at slight differences between two versions of the same SRT file (number of subtitles have to match). Then, it lets users merge the two versions by picking the subtitle from either file or editing in a custom version for a subtitle.
 
