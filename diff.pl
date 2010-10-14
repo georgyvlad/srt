@@ -339,6 +339,9 @@ sub print_merge_form
 	# display a 'Merge' button on top
 	print '<tr><td colspan="4">', $q->submit( 'submit', 'Merge' ), "</td></tr>\n";
 
+	# counter for the differing srt's only
+	my $d = 0;
+
 	foreach ( my $i = 0; $i < @$srt1; $i++ )
 	{
 		# show only the subtitles that differ in their text
@@ -384,7 +387,7 @@ EOF
 
 			# display a 'Merge' button every four rows for convenience
 			print '<tr><td colspan="4">', $q->submit( 'submit', 'Merge' ), "</td></tr>\n"
-				if ( $i > 0 and $i % 4 == 0 );
+				if ( $d > 0 and $d++ % 4 == 0 );
 
 		}
 	}
