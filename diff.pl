@@ -347,6 +347,8 @@ sub print_merge_form
 		# show only the subtitles that differ in their text
 		if ( $srt1->[$i]{'txt'} ne $srt2->[$i]{'txt'} )
 		{
+			$d++;
+
 			# we always take value for the "order" field from the first file
 			my $sorder = $srt1->[$i]{'c'};
 
@@ -387,7 +389,7 @@ EOF
 
 			# display a 'Merge' button every four rows for convenience
 			print '<tr><td colspan="4">', $q->submit( 'submit', 'Merge' ), "</td></tr>\n"
-				if ( $d > 0 and $d++ % 4 == 0 );
+				if ( $d > 0 and $d % 4 == 0 );
 
 		}
 	}
