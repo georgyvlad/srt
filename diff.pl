@@ -394,7 +394,8 @@ EOF
 		}
 	}
 	print "</table>\n";
-	print $q->submit( 'submit', 'Merge' ), "<br><br>\n";
+	# print 'Merge' button on the bottom (but avoid two of them back to back)
+	print $q->submit( 'submit', 'Merge' ), "<br><br>\n"  unless ( $d % 4 == 0 );
 	print $q->end_form;
 
 	# a separate form/button for export of the final version
