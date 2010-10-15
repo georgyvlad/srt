@@ -320,10 +320,11 @@ sub print_merge_form
 {
 	# see which button the user clicked (so we can take him there again)
 	my $button = $p->{'button'};
-	$button = 'top'  unless ( defined $button );
 
-	# a little JavaScript to send us to the last 'Merge' button the user clicked
-	print <<"END";
+	# if we have a clicked 'Merge' button, print a little JavaScript to send us there
+	if ( defined $button and $button > 0 )
+	{
+		print <<"END";
 <script type="text/javascript">
 	function goToAnchor() {
 		location.href = "#button_$button";
@@ -331,9 +332,11 @@ sub print_merge_form
 </script>
 
 <body onload="goToAnchor();">
-
-<a name="button_top"></a>
 END
+	}
+	else {
+		print "<body>\n";
+	}
 
 	print $q->h3( "Project: $project" );
 	print $q->h4( "SRT files in project:" );
@@ -355,7 +358,7 @@ END
 	};
 
 	# display a 'Merge' button on top
-	print &merge_button( 0 );
+	print &merge_button( 0, $button );
 
 	# counter for the differing srt's only
 	my $d = 0;
@@ -406,13 +409,13 @@ END
 EOF
 
 			# display a 'Merge' button every four rows for convenience
-			print &merge_button( $d )  if ( $d % 4 == 0 );
+			print &merge_button( $d, $button )  if ( $d % 4 == 0 );
 
 		}
 	}
 
 	# print 'Merge' button on the bottom (but avoid two of them back to back)
-	print &merge_button( $d )  unless ( $d % 4 == 0 );
+	print &merge_button( $d, $button )  unless ( $d % 4 == 0 );
 
 	print "</table>\n";
 	print $q->end_form;
@@ -427,17 +430,20 @@ EOF
 	print "</body>\n"
 }
 
-# create string for merge button, an anchor to it and settting the 'button' hidden input to it
+# create string for merge button, an anchor to it (if clicked) and settting the 'button' hidden input to it
 sub merge_button
 {
-	my ($button) = @_;
+	my ($button, $clicked) = @_;
 
-	return qq{
-<tr><td colspan="4">
-	<a name="button_$button"></a>
+	# create an anchor only if this button was clicked
+	my $anchor = ( defined $clicked and $button == $clicked ) ? qq|<a name="button_$button"></a>| : '';
+
+	return <<"EOF";
+<tr><td colspan="4">$anchor
 	<input type="submit" value="Merge" onclick="this.form.button.value = $button;">
 </td></tr>
-	};
+EOF
+
 }
 
 sub export_final_project
