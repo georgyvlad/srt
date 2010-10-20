@@ -298,7 +298,9 @@ sub read_project_master_file
 sub print_file_form
 {
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
-	print 'File1: ', $q->filefield( 'file1', '', 75, 200 ), "<br><br>\n";
+	# default to showing a maximum of 25 diffs at a time
+	print '<input type="hidden" name="max_diffs" value="25">', "\n";
+	print 'File1: ', $q->filefield( 'file1', '', 75, 200 ), " &nbsp;(Reference SRT)<br><br>\n";
 	print 'File2: ', $q->filefield( 'file2', '', 75, 200 ), "<br><br>\n";
 	print "The two files you submit will automatically create a project that you can work on later.<br>
 		The upload of the file may take some time depending on how big they are. Once the files are<br>
@@ -312,69 +314,71 @@ sub print_file_form
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
 	print 'Existing Project: ', $q->textfield( 'project', '', 75, 200 ), "<br><br>\n";
 	print "If you enter a number here for an existing project, the file inputs above will be ignored.<br><br>\n";
+	# default to hiding the diffs that already have merge choices
+	print '<input type="hidden" name="hide_merged" value="1">', "\n";
+	# default to showing a maximum of 25 diffs at a time
+	print '<input type="hidden" name="max_diffs" value="25">', "\n";
 	print $q->submit( 'submit', 'View Diffs' ), "<br><br>\n";
 	print $q->end_form;
 }
 
 sub print_merge_form
 {
-	# see which button the user clicked (so we can take him there again)
-	my $button = $p->{'button'};
+	# see whether user doesn't want to see the diffs that have been merged already
+	my $hide_merged_checked = ( $p->{'hide_merged'} ) ? 'checked' : '';
+	# see whether the user wants some maximum number of diffs to show at a time (make sure it's an integer)
+	my $max_diffs = $p->{'max_diffs'};
+	$max_diffs = '0'  unless ( defined $max_diffs );
+	$max_diffs = ( $max_diffs =~ m/(\d+)/ ) ? $1 : 0;
+	$max_diffs -= 0;
 
-	# if we have a clicked 'Merge' button, print a little JavaScript to send us there
-	if ( defined $button and $button > 0 )
-	{
-		print <<"END";
-<script type="text/javascript">
-	function goToAnchor() {
-		location.href = "#button_$button";
-	}
-</script>
-
-<body onload="goToAnchor();">
-END
-	}
-	else {
-		print "<body>\n";
-	}
-
+	print "<body>\n";
 	print $q->h3( "Project: $project" );
 	print $q->h4( "SRT files in project:" );
 	print qq{
-		<b>File1:</b> $fn1<br>
+		<b>File1:</b> $fn1 &nbsp;(Reference SRT)<br>
 		<b>File2:</b> $fn2<br><br>
 		In the diffs below, you can pick the version of the subtitle from File1, File2, enter a custom value<br>
 		or choose not to pick a version yet (no merge yet). Then, you click any 'Merge' button. You should<br>
 		click 'Merge' often (even before completely finished) because that is when your choices get saved.<br><br>
 	};
-	print $q->h4( "Diffs:" );
 
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
 	print qq{
 		<input type="hidden" name="step" value="merge">
 		<input type="hidden" name="project" value="$project">
-		<input type="hidden" name="button" value="0">
+		<input type="checkbox" name="hide_merged" value="1" $hide_merged_checked>
+			Hide merged diffs (uncheck this and click 'Merge' to see merged diffs as well)<br><br>
+		<input type="text" name="max_diffs" value="$max_diffs" size="2">
+			diffs maximum to display at a time (set to 0 and click 'Merge' for no limit)
+
+		<h4>Diffs:</h4>
+
 		<table>
 	};
 
 	# display a 'Merge' button on top
-	print &merge_button( 0, $button );
+	print &merge_button( 0 );
 
-	# counter for the differing srt's only
+	# counter for the differing (and displayed) srt's only
 	my $d = 0;
+	my $sorder;
 
 	foreach ( my $i = 0; $i < @$srt1; $i++ )
 	{
 		# show only the subtitles that differ in their text
 		if ( $srt1->[$i]{'txt'} ne $srt2->[$i]{'txt'} )
 		{
-			$d++;
-
 			# we always take value for the "order" field from the first file
-			my $sorder = $srt1->[$i]{'c'};
+			$sorder = $srt1->[$i]{'c'};
 
-			# see whether we have a record for this subtitle in the master hash
+			# see whether we have a record (merge choice) for this subtitle in the master hash
 			my $m = $srtm{ $sorder };
+
+			# if we have a merge choice but don't want to see it, skip the display below
+			next if ( $m and $p->{'hide_merged'} );
+
+			$d++;
 
 			my $file1_checked = ( $m and $m->{'merge'} eq 'file1' ) ? 'checked' : '';
 			my $file2_checked = ( $m and $m->{'merge'} eq 'file2' ) ? 'checked' : '';
@@ -409,13 +413,15 @@ END
 EOF
 
 			# display a 'Merge' button every four rows for convenience
-			print &merge_button( $d, $button )  if ( $d % 4 == 0 );
+			print &merge_button( $d )  if ( $d % 4 == 0 );
 
+			# stop displaying diffs, if we have a maximum and we have reached it
+			last  if ( $max_diffs and $d >= $max_diffs );
 		}
 	}
 
 	# print 'Merge' button on the bottom (but avoid two of them back to back)
-	print &merge_button( $d, $button )  unless ( $d % 4 == 0 );
+	print &merge_button( $d )  unless ( $d % 4 == 0 );
 
 	print "</table>\n";
 	print $q->end_form;
@@ -430,17 +436,14 @@ EOF
 	print "</body>\n"
 }
 
-# create string for merge button, an anchor to it (if clicked) and settting the 'button' hidden input to it
+# create string for merge button
 sub merge_button
 {
-	my ($button, $clicked) = @_;
-
-	# create an anchor only if this button was clicked
-	my $anchor = ( defined $clicked and $button == $clicked ) ? qq|<a name="button_$button"></a>| : '';
+	my ($button) = @_;
 
 	return <<"EOF";
-<tr><td colspan="4">$anchor
-	<input type="submit" value="Merge" onclick="this.form.button.value = $button;">
+<tr><td colspan="4">
+	<input type="submit" value="Merge">
 </td></tr>
 EOF
 
