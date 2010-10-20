@@ -426,12 +426,18 @@ EOF
 	print "</table>\n";
 	print $q->end_form;
 
-	# a separate form/button for export of the final version
 	print "<br><hr><br>";
+
+	# a separate form/button for export of the final version
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
 	print qq{<input type="hidden" name="step" value="export">\n};
 	print qq{<input type="hidden" name="project" value="$project">\n};
 	print $q->submit( 'submit', 'Export' ), "<br><br>\n";
+	print $q->end_form;
+
+	# a separate form/button for starting a new project
+	print $q->start_form( 'POST', undef, 'multipart/form-data' );
+	print $q->submit( 'submit', 'Start New Project' ), "<br><br>\n";
 	print $q->end_form;
 	print "</body>\n"
 }
