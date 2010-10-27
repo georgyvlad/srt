@@ -65,8 +65,13 @@ sub parse_file
 		# separator line, time to save the data
 		if ( $started and $line eq '' )
 		{
+			$t = '' unless ( defined $t );
+			$txt = '' unless ( defined $txt );
+
 			push @srt, { 'c' => $c, 't' => $t, 'txt' => $txt };
+
 			$c = $t = $txt = undef;
+			$started = 0;
 		}
 		else
 		{
@@ -224,9 +229,10 @@ sub shift_srt_timestamps
 {
 	my ($self, $t, $s) = @_;
 
-	if ( $t =~ /^(.*) --> (.*)$/ )
+	my ( $t1, $t2 ) = $self->get_start_end( $t );
+
+	if ( defined $t1 and defined $t2 )
 	{
-		my ( $t1, $t2 ) = ( $1, $2 );
 		my $t1_num = $self->timestamp_as_num( $t1 );
 		my $t2_num = $self->timestamp_as_num( $t2 );
 
@@ -245,6 +251,32 @@ sub shift_srt_timestamps
 	else
 	{
 		return $t;
+	}
+}
+
+# takes a SRT timestamp and returns the start and end timestamps within it
+sub get_start_end
+{
+	my ($self, $t) = @_;
+	my $t1 = undef;
+	my $t2 = undef;
+
+	if ( $t =~ /^(.*) --> (.*)$/ )
+	{
+		( $t1, $t2 ) = ( $1, $2 );
+	}
+
+	return ( $t1, $t2 );
+}
+
+# takes a reference to an array of srts and renumbers them starting from 1
+sub renumber_srts_order
+{
+	my ($self, $srts) = @_;
+
+	for ( my $i = 0; $i < @$srts; $i++ )
+	{
+		$srts->[$i]{'c'} = $i + 1;
 	}
 }
 
