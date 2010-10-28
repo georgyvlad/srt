@@ -87,7 +87,10 @@ sub parse_file
 	close $dfh if ( defined $dfh );
 
 	# save the last subtitle
-	if ( defined $c and defined $t ) {
+	if ( defined $c and defined $t )
+	{
+		$txt = '' unless ( defined $txt );
+
 		push @srt, { 'c' => $c, 't' => $t, 'txt' => $txt };
 	}
 
