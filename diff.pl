@@ -149,6 +149,7 @@ sub submit_and_parse_files
 
 	$srt1 = $so->parse_file( \*$fh1, $dfh1 );
 	$srt2 = $so->parse_file( \*$fh2, $dfh2 );
+	&equalize_arrays();
 
 	&save_project_meta_file();
 }
@@ -162,6 +163,24 @@ sub parse_files
 
 	$srt1 = $so->parse_file( $fh1 );
 	$srt2 = $so->parse_file( $fh2 );
+	&equalize_arrays();
+}
+
+# the two srt arrays should always be equal (we equalize them here)
+sub equalize_arrays
+{
+	return unless ( defined $srt1 and defined $srt2 );
+
+	my $cnt1 = scalar @$srt1;
+	my $cnt2 = scalar @$srt2;
+	return if ( $cnt1 == $cnt2 );
+
+	my $cnt = ( $cnt1 > $cnt2 ) ? $cnt1 : $cnt2;
+	for ( my $i = 0; $i < $cnt; $i++ )
+	{
+		push @$srt1, { 'c' => $srt2->[$i]{'c'}, 't' => $srt2->[$i]{'t'}, 'txt' => '' }  if ( $i >= $cnt1 );
+		push @$srt2, { 'c' => $srt1->[$i]{'c'}, 't' => $srt1->[$i]{'t'}, 'txt' => '' }  if ( $i >= $cnt2 );
+	}
 }
 
 sub save_project_meta_file
@@ -474,11 +493,13 @@ sub export_final_project
 	# go over each subtitle
 	foreach ( my $i = 0; $i < @$srt1; $i++ )
 	{
+		# default to the subtitle from file1
+		$s = $srt1->[$i];
+
 		# if subtitles differ in their text, look at the record in the master hash
 		if ( $srt1->[$i]{'txt'} ne $srt2->[$i]{'txt'} )
 		{
 			# we always take value for the "order" field from the first file
-			$s = $srt1->[$i];
 			my $sorder = $s->{'c'};
 
 			# see whether we have a record for this subtitle in the master hash
@@ -505,20 +526,22 @@ sub export_final_project
 				$so->error( "Bad value ($m->{'merge'}) in project master file for subtitle: $sorder.", 1 )
 			}
 		}
-		# if they are identical, take the one from file1
-		else
-		{
-			$s = $srt1->[$i];
-		}
 
 		# keep accumulating the file contents
 		$file_txt .= "$s->{'c'}\n$s->{'t'}\n$s->{'txt'}\n\n";
 	}
 
+	my $filename = $fn1;
+	if ( $filename =~ /\.srt$/i ) {
+		$filename =~ s/\.srt/.exported.srt/i;
+	} else {
+		$filename .= '.exported.srt';
+	}
+
 	print $q->header(
 		-type => 'text/plain',
 		-charset => $encoding,
-		-attachment => $fn1
+		-attachment => $filename
 	);
 	print $file_txt;
 }
