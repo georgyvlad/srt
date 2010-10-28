@@ -280,5 +280,14 @@ sub renumber_srts_order
 	}
 }
 
+# remove whitespace at beginning and end of string
+sub trim
+{
+	# the 0 element should be $self, we look at the 1 element
+	return unless ( defined $_[1] );
+
+	$_[1] =~ s/^\s+|\s+$//gs;
+}
+
 
 1;

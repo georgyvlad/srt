@@ -246,6 +246,9 @@ sub refragment
 
 	return unless ( @frag_srts > 0 );
 
+	# strip out leading and trailing whitespace from the fragments
+#	$so->trim( $_->{'txt'} )  foreach ( @frag_srts );
+
 	my $last_index;
 
 	# if the 'Reference SRT' file has more subtitles at the end, just add them

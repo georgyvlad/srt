@@ -235,10 +235,21 @@ sub merge_files
 			$s->{'t'} = 'custom';		# maybe in the future we can have the user enter this
 
 			my $custom = $p->{"custom_$sorder"};
+			$so->trim( $custom );
+			&strip_end_pipes( $custom );
 			$custom = ''  unless ( defined $custom );
 			$s->{'txt'} = $custom;
 		}
 	}
+}
+
+# some users don't remove the visual pipes we display (to show leading and trailing space)
+# this sub will remove them
+sub strip_end_pipes
+{
+   return unless ( defined $_[0] );
+
+   $_[0] =~ s/^\|+|\|+$//gs;
 }
 
 sub save_project_master_file
