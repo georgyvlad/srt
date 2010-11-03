@@ -292,5 +292,19 @@ sub trim
 	$_[1] =~ s/^\s+|\s+$//gs;
 }
 
+sub print_tools_menu
+{
+	print qq{
+<table border="0" cellpadding="2">
+<tr>
+	<td width="80"><a href="diff.pl">Diff</a></td>
+	<td width="100"><a href="tmshift.pl">Timeshift</a></td>
+	<td width="100"><a href="frag.pl">Refragment</a></td>
+	<td width="100"><a href="feedback.pl">Feedback</a></td>
+</tr>
+</table>
+	};
+}
+
 
 1;

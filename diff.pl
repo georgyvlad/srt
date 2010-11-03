@@ -64,9 +64,7 @@ if ( $p->{'step'} and $p->{'step'} eq 'export' )
 	exit;
 }
 
-
-print $q->header( -type => 'text/html', -charset => $encoding );
-print $q->start_html( 'Zeitgeist Movement | SRT | diff' );
+&print_header();
 
 # user submits his merge input
 if ( $p->{'step'} and $p->{'step'} eq 'merge' )
@@ -327,6 +325,7 @@ sub read_project_master_file
 
 sub print_file_form
 {
+	&print_tool_header();
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
 	# default to showing a maximum of 25 diffs at a time
 	print '<input type="hidden" name="max_diffs" value="25">', "\n";
@@ -350,6 +349,16 @@ sub print_file_form
 	print '<input type="hidden" name="max_diffs" value="25">', "\n";
 	print $q->submit( 'submit', 'View Diffs' ), "<br><br>\n";
 	print $q->end_form;
+	print "</body>\n";
+}
+
+sub print_files_in_project
+{
+	print $q->h4( "SRT files in project:" );
+	print qq{
+		<b>File1:</b> $fn1 &nbsp;(Reference SRT)<br>
+		<b>File2:</b> $fn2<br><br>
+	};
 }
 
 sub print_merge_form
@@ -362,12 +371,9 @@ sub print_merge_form
 	$max_diffs = ( $max_diffs =~ m/(\d+)/ ) ? $1 : 0;
 	$max_diffs -= 0;
 
-	print "<body>\n";
-	print $q->h3( "Project: $project" );
-	print $q->h4( "SRT files in project:" );
+	&print_tool_header();
+	&print_project_header();
 	print qq{
-		<b>File1:</b> $fn1 &nbsp;(Reference SRT)<br>
-		<b>File2:</b> $fn2<br><br>
 		In the diffs below, you can pick the version of the subtitle from File1, File2, enter a custom value<br>
 		or choose not to pick a version yet (no merge yet). Then, you click any 'Merge' button. You should<br>
 		click 'Merge' often (even before completely finished) because that is when your choices get saved.<br><br>
@@ -485,10 +491,52 @@ EOF
 
 }
 
+sub print_incomplete_export_form
+{
+	&print_tool_header();
+	&print_project_header();
+	print qq{
+		You are trying to export a project where not all diffs have been resolved!<br><br>
+
+		If you want, you can export the incomplete version. All diffs you have resolved will go through.<br>
+		For the ones you have not resolved, the version from File1 will be used.<br><br>
+	};
+
+	# a form/button for export of the incomplete version
+	print $q->start_form( 'POST', undef, 'multipart/form-data' );
+	print qq{<input type="hidden" name="step" value="export">\n};
+	print qq{<input type="hidden" name="incomplete_export" value="1">\n};
+	print qq{<input type="hidden" name="project" value="$project">\n};
+	print $q->submit( 'submit', 'Export Incomplete Version' ), "<br><br>\n";
+	print $q->end_form;
+
+	print "</body>\n";
+}
+
+sub print_header
+{
+	print $q->header( -type => 'text/html', -charset => $encoding );
+	print $q->start_html( 'Zeitgeist Movement | SRT | diff' );
+}
+
+sub print_tool_header
+{
+	print "<body>\n";
+	$so->print_tools_menu();
+	print "<h1>Diff SRT</h1>\n";
+}
+
+sub print_project_header
+{
+	print $q->h3( "Project: $project" );
+	&print_files_in_project();
+}
+
 sub export_final_project
 {
 	my $file_txt = '';
 	my $s;
+	my $accept_incomplete = $p->{'incomplete_export'};
 
 	# go over each subtitle
 	foreach ( my $i = 0; $i < @$srt1; $i++ )
@@ -504,8 +552,21 @@ sub export_final_project
 
 			# see whether we have a record for this subtitle in the master hash
 			my $m = $srtm{ $sorder };
-			$so->error( "All diffs have to be merged before you can export.", 1 )
-				unless ( $m );
+			unless ( $m )
+			{
+				unless ( $accept_incomplete )
+				{
+					&print_header();
+					&print_incomplete_export_form();
+					return;
+				}
+				# user explicitly asked for an incomplete export
+				else
+				{
+					# pretend there is a merge choice and it's set to file1
+					$m = { 'merge' => 'file1' };
+				}
+			}
 
 			# use file1
 			if ( $m->{'merge'} eq 'file1' )

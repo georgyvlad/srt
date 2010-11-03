@@ -445,10 +445,28 @@ sub compare
 	return $t1 - $t2;
 }
 
-sub print_file_form
+sub print_tool_header
 {
 	print "<body>\n";
+	$so->print_tools_menu();
 	print "<h1>Refragment SRT</h1>\n";
+}
+
+sub print_project_header
+{
+	print qq{
+<h3>Project: $project</h3>
+<h4>SRT files in project:</h4>
+
+<b>Reference SRT:&nbsp;</b> $fn1<br>
+<b>Refragment SRT:</b> $fn2<br><br>
+	};
+}
+
+sub print_file_form
+{
+	&print_tool_header();
+
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
 	print 'Reference SRT: &nbsp;', $q->filefield( 'file1', '', 75, 200 ), "<br><br>\n";
 	print 'Refragment SRT: ', $q->filefield( 'file2', '', 75, 200 ), "<br><br>\n";
@@ -487,15 +505,10 @@ sub print_refragment_form
 		join( ' ', map { $_->{'txt'} } @$section_srts2 ) :
 		'[ -- MISSING SUBTITLE -- ]';
 
+	&print_tool_header();
+	&print_project_header();
+
 	print qq{
-<body>
-<h1>Refragment SRT</h1>
-<h3>Project: $project</h3>
-<h4>SRT files in project:</h4>
-
-<b>Reference SRT:&nbsp;</b> $fn1<br>
-<b>Refragment SRT:</b> $fn2<br><br>
-
 Below is a section in the 'Refragment SRT' where it is fragmented differently from the 'Reference SRT'.<br>
 Here, you can take the subtitle text and split it up the same way. You have to take the whole subtitle<br>
 text displayed here and split it up into the text boxes provided. When you click 'Refragment',<br>
@@ -562,15 +575,10 @@ the two SRT files. Synchronization removes tiny timestamp differences (less than
 
 sub print_sync_form
 {
+	&print_tool_header();
+	&print_project_header();
+
 	print qq{
-<body>
-<h1>Refragment SRT</h1>
-<h3>Project: $project</h3>
-<h4>SRT files in project:</h4>
-
-<b>Reference SRT:&nbsp;</b> $fn1<br>
-<b>Refragment SRT:</b> $fn2<br><br>
-
 The 'Reference SRT' file and the 'Refragment SRT' do not have any more fragmentation differences.<br>
 There may be still some minor timestamp differences. You can click 'Synchronize Timestamps' below to<br>
 synchronize the timestamps from 'Reference SRT' file into the 'Refragment SRT' file. And then, you<br>

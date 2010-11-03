@@ -227,9 +227,24 @@ sub read_project_meta_file
 	close $mfh;
 }
 
+sub print_tool_header
+{
+	print "<body>\n";
+	$so->print_tools_menu();
+	print "<h1>Timeshift SRT</h1>\n";
+}
+
+sub print_project_header
+{
+	print $q->h3( "Project: $project" );
+	print $q->h4( "SRT files in project:" );
+	&print_srt_files();
+}
+
 sub print_file_form
 {
-	print "<h1>The LingTeam Time Machine</h1>\n";
+	&print_tool_header();
+
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
 	print qq{
 		<input type="hidden" name="step" value="upload_first">
@@ -269,10 +284,8 @@ sub print_srt_files
 
 sub print_nextfile_form
 {
-	print $q->h1("The LingTeam Time Machine" ), "\n";
-	print $q->h3( "Project: $project" );
-	print $q->h4( "SRT files in project so far:" );
-	&print_srt_files();
+	&print_tool_header();
+	&print_project_header();
 
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
 	print qq{
@@ -294,14 +307,13 @@ sub print_nextfile_form
 	};
 	print $q->submit( 'submit', 'Show Timestamps' ), "<br><br>\n";
 	print $q->end_form;
+	print "</body>";
 }
 
 sub print_times_form
 {
-	print $q->h1("The LingTeam Time Machine" ), "\n";
-	print $q->h3( "Project: $project" );
-	print $q->h4( "SRT files in project:" );
-	&print_srt_files();
+	&print_tool_header();
+	&print_project_header();
 
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
 	print qq{
@@ -364,6 +376,7 @@ sub print_times_form
 	print qq{<input type="hidden" name="project" value="$project">\n};
 	print $q->submit( 'submit', 'Export' ), "<br><br>\n";
 	print "</form>\n";
+	print "</body>";
 }
 
 sub remove_whitespace
