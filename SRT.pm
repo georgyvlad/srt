@@ -119,6 +119,15 @@ sub cgi_to_file_handle
 }
 
 
+sub get_stripped_ip
+{
+	my ($self) = @_;
+	my $ip = $self->{'q'}->remote_addr;
+	$ip =~ s/\.//g;
+	return $ip;
+}
+
+
 # generate a unique name for a new project (use IP and a random number)
 sub get_new_project_name
 {
@@ -126,8 +135,7 @@ sub get_new_project_name
 	my ($project, $ip, $mf);
 	my $tries = 20;
 
-	$ip = $self->{'q'}->remote_addr;
-	$ip =~ s/\.//g;
+	$ip = $self->get_stripped_ip();
 
 	# find a name that hasn't been taken already (metafile for such project doesn't exist)
 	do {
@@ -150,6 +158,19 @@ sub meta_file_name
 {
 	my ($self, $project) = @_;
 	return "$self->{data_dir}${project}_meta.txt";
+}
+
+
+sub get_user_projects
+{
+	my ($self) = @_;
+	my $data_dir = $self->{'data_dir'};
+	my $ip = $self->get_stripped_ip();
+
+	my @meta_files = glob( "${data_dir}${ip}*_meta.txt" );
+	my @projects = map { ( $_ =~ /^$data_dir(\d+)_meta.txt$/ ) ? $1 : () } @meta_files;
+
+	return \@projects;
 }
 
 

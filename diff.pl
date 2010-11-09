@@ -66,6 +66,7 @@ if ( $p->{'step'} and $p->{'step'} eq 'export' )
 
 &print_header();
 
+
 # user submits his merge input
 if ( $p->{'step'} and $p->{'step'} eq 'merge' )
 {
@@ -85,6 +86,11 @@ if ( $p->{'step'} and $p->{'step'} eq 'merge' )
 	&read_project_master_file();
 
 	&print_merge_form();
+}
+# user wants to see his other projects
+elsif ( $p->{'step'} and $p->{'step'} eq 'myprojects' )
+{
+	&print_user_projects();
 }
 # user wants to work on existing project
 elsif ( $p->{'project'} )
@@ -349,7 +355,44 @@ sub print_file_form
 	print '<input type="hidden" name="max_diffs" value="25">', "\n";
 	print $q->submit( 'submit', 'View Diffs' ), "<br><br>\n";
 	print $q->end_form;
+
+	print "--- OR ---<br><br>\n";
+
+	print 'View all projects created from this computer (IP address).', "<br><br>\n";
+	print $q->start_form( 'POST', undef, 'multipart/form-data' );
+	print '<input type="hidden" name="step" value="myprojects">', "\n";
+	print $q->submit( 'submit', 'My Projects' ), "<br><br>\n";
+	print $q->end_form;
+
 	print "</body>\n";
+}
+
+sub print_user_projects
+{
+	my $projects = $so->get_user_projects();
+
+	&print_tool_header();
+	unless ( @$projects > 0 ) {
+		print "No projects have been created from this computer (IP address).";
+		return;
+	}
+
+	print "<h4>Projects created from this computer (IP address):</h4>\n";
+	print qq{<table cellpadding="4">\n};
+	foreach ( @$projects )
+	{
+		print "<tr>\n<td> $_  </td>\n<td><br>\n";
+		print $q->start_form( 'POST', undef, 'multipart/form-data' );
+		print qq{<input type="hidden" name="project" value="$_">\n};
+		# default to hiding the diffs that already have merge choices
+		print '<input type="hidden" name="hide_merged" value="1">', "\n";
+		# default to showing a maximum of 25 diffs at a time
+		print '<input type="hidden" name="max_diffs" value="25">', "\n";
+		print $q->submit( 'submit', 'View Diffs' ), "<br><br>\n";
+		print "</form>\n";
+		print "</td></tr>\n";
+	}
+	print "</table>\n";
 }
 
 sub print_files_in_project
