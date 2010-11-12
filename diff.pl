@@ -4,7 +4,10 @@
 # The files are usually two versions of the same video (timestamps are identical) with very small
 # differences. The user can see these diffs and pick the subtitle version from either SRT file or
 # even enter a custom subtitle text instead of either version. At the end, the user can export the
-# resulting merged version and download it to his computer.
+# resulting merged version and download it to his computer. There is an option for adding a third
+# SRT file that has the subtitles in the original (English) language. If you provide such a file,
+# you will see the original subtitle text above each file1/file2 subtitle diff.
+#
 # The script keeps all its data in a data directory, which is by default the current directory
 # where the script is running. If the directory doesn't exist, it will attempt to create it.
 #
@@ -33,7 +36,8 @@ my $max_datafile_age = ( 60 * 24 * 60 * 60 );	# 60 days ago
 my $q = CGI->new;
 my $p = $q->Vars;
 
-my ($fh1, $fh2, $fn1, $fn2, $srt1, $srt2, %srtm, $project);
+my ($fh1, $fh2, $fh3, $fn1, $fn2, $fn3, $srt1, $srt2, $srt3, %srt3, %srtm, $project);
+%srt3 = ();
 
 my $encoding = $p->{'encoding'};
 $encoding = 'utf8'  unless ( $encoding );		# 'iso-8859-1', 'utf8'
@@ -67,8 +71,32 @@ if ( $p->{'step'} and $p->{'step'} eq 'export' )
 &print_header();
 
 
+# user wants to submit an optional third file
+if ( $p->{'step'} and $p->{'step'} eq 'file3form' )
+{
+	$project = $p->{'project'};
+
+	&read_project_meta_file();
+
+	&print_file3_form();
+}
+# user submitted an optional third file
+elsif ( $p->{'step'} and $p->{'step'} eq 'submitfile3' )
+{
+	$project = $p->{'project'};
+
+	&read_project_meta_file();
+
+	&submit_file3();
+
+	&read_project_master_file();
+
+	&parse_files();
+
+	&print_merge_form();
+}
 # user submits his merge input
-if ( $p->{'step'} and $p->{'step'} eq 'merge' )
+elsif ( $p->{'step'} and $p->{'step'} eq 'merge' )
 {
 	$project = $p->{'project'};
 
@@ -140,6 +168,24 @@ sub check_input_files
 	$so->error( "File2 can't be read." )  unless ( defined $fh2 );
 	$fn2 = $p->{'file2'};
 	$fn2 =~ s/\n//g;
+
+	# check file3 but as optional
+	&check_input_file3( 1 );
+}
+
+sub check_input_file3
+{
+	my ($optional) = @_;
+	
+	# third file is optional check it only if one was submitted
+	$fn3 = $p->{'file3'};
+	$fn3 = ''  unless ( defined $fn3 );
+	$fn3 =~ s/\n//g;
+	return if ( $optional and not $fn3 );
+
+	$fh3 = $q->upload( 'file3' );
+	$fh3 = $so->cgi_to_file_handle( $fh3 )  if ( defined $fh3 );
+	$so->error( "File3 can't be read." )  unless ( defined $fh3 );
 }
 
 sub submit_and_parse_files
@@ -155,6 +201,30 @@ sub submit_and_parse_files
 	$srt2 = $so->parse_file( \*$fh2, $dfh2 );
 	&equalize_arrays();
 
+	# file3 is optional
+	if ( $fn3 )
+	{
+		my $df3 = "${data_dir}${project}_file3.srt";
+		my $dfh3;
+		open( $dfh3, ">", $df3 )  or $so->error( "Can't save file3: $!\n" );
+		$srt3 = $so->parse_file( \*$fh3, $dfh3 );
+		# convert the array of subtitles into a hash (with the "order" field as the key)
+		%srt3 = map { ( $_->{'c'} => $_ ) } @$srt3;
+	}
+
+	&save_project_meta_file();
+}
+
+sub submit_file3
+{
+	&check_input_file3();
+
+	my $df3 = "${data_dir}${project}_file3.srt";
+	my $dfh3;
+	open( $dfh3, ">", $df3 )  or $so->error( "Can't save file3: $!\n" );
+	# use the parse_file just to copy and save file3
+	$srt3 = $so->parse_file( \*$fh3, $dfh3 );
+
 	&save_project_meta_file();
 }
 
@@ -168,6 +238,15 @@ sub parse_files
 	$srt1 = $so->parse_file( $fh1 );
 	$srt2 = $so->parse_file( $fh2 );
 	&equalize_arrays();
+
+	if ( $fn3 )
+	{
+		my $df3 = "${data_dir}${project}_file3.srt";
+		open( $fh3, "<", $df3 )  or $so->error( "Can't open file3: $!\n" );
+		$srt3 = $so->parse_file( $fh3 );
+		# convert the array of subtitles into a hash (with the "order" field as the key)
+		%srt3 = map { ( $_->{'c'} => $_ ) } @$srt3;
+	}
 }
 
 # the two srt arrays should always be equal (we equalize them here)
@@ -193,6 +272,7 @@ sub save_project_meta_file
 	my $mfh;
 	open( $mfh, ">", $mf )  or $so->error( "Can't save project meta file: $!\n" );
 	print $mfh "file1=$fn1\n", "file2=$fn2\n";
+	print $mfh "file3=$fn3\n"  if ( $fn3 );
 	close $mfh;
 }
 
@@ -207,6 +287,9 @@ sub read_project_meta_file
 	$fn1 = $1  if ( $fn1 =~ /^file1=(.*)/m );
 	$fn2 = <$mfh>;
 	$fn2 = $1  if ( $fn2 =~ /^file2=(.*)/m );
+	$fn3 = <$mfh>;
+	$fn3 = ''  unless ( defined $fn3 );
+	$fn3 = $1  if ( $fn3 =~ /^file3=(.*)/m );
 	close $mfh;
 }
 
@@ -337,8 +420,11 @@ sub print_file_form
 	print '<input type="hidden" name="max_diffs" value="25">', "\n";
 	print 'File1: ', $q->filefield( 'file1', '', 75, 200 ), " &nbsp;(Reference SRT)<br><br>\n";
 	print 'File2: ', $q->filefield( 'file2', '', 75, 200 ), "<br><br>\n";
+	print 'File3: ', $q->filefield( 'file3', '', 75, 200 ), " &nbsp;(optional - English/original SRT)<br><br>\n";
 	print "The two files you submit will automatically create a project that you can work on later.<br>
-		The upload of the file may take some time depending on how big they are. Once the files are<br>
+		The third file (optional) is the original (English) SRT, if you provide one you will see the<br>
+		original/English subtitle above the file1/file2 (translated) subtitles.
+		The upload of the files may take some time depending on how big they are. Once the files are<br>
 		uploaded, they are saved on the server and viewing their diffs is much quicker. Use the option<br>
 		below for a project you have already started (files uploaded)<br><br>\n";
 	print $q->submit( 'submit', 'Upload Files and View Diffs' ), "<br><br>\n";
@@ -397,11 +483,32 @@ sub print_user_projects
 
 sub print_files_in_project
 {
+	my ($skip_file3) = @_;
+
 	print $q->h4( "SRT files in project:" );
 	print qq{
 		<b>File1:</b> $fn1 &nbsp;(Reference SRT)<br>
-		<b>File2:</b> $fn2<br><br>
+		<b>File2:</b> $fn2<br>
 	};
+
+	return if ( $skip_file3 );
+
+	if ( $fn3 )
+	{
+		print qq{<b>File3:</b> $fn3 &nbsp;(optional - English/original SRT)<br><br>};
+	}
+	else
+	{
+		print qq{<table cellpadding="0" cellspacing="0"><tr>\n};
+		print qq{<td><b>File3:</b> (optional)&nbsp; &nbsp; </td>};
+		print "<td>\n";
+		print $q->start_form( 'POST', undef, 'multipart/form-data' );
+		print qq{<input type="hidden" name="project" value="$project">\n};
+		print '<input type="hidden" name="step" value="file3form">', "\n";
+		print $q->submit( 'submit', 'Add File3 (English/original SRT)' ), "<br>\n";
+		print "</form>\n";
+		print "</td></tr></table><br>\n";
+	}
 }
 
 sub print_merge_form
@@ -416,6 +523,7 @@ sub print_merge_form
 
 	&print_tool_header();
 	&print_project_header();
+
 	print qq{
 		In the diffs below, you can pick the version of the subtitle from File1, File2, enter a custom value<br>
 		or choose not to pick a version yet (no merge yet). Then, you click any 'Merge' button. You should<br>
@@ -437,7 +545,7 @@ sub print_merge_form
 	};
 
 	# display a 'Merge' button on top
-	print &merge_button( 0 );
+	print &merge_button();
 
 	# counter for the differing (and displayed) srt's only
 	my $d = 0;
@@ -466,9 +574,32 @@ sub print_merge_form
 			$donotmerge_checked = 'checked' unless ( $file1_checked or $file2_checked or $custom_checked );
 			my $custom = ( $custom_checked ) ? $m->{'txt'} : '';
 
+			# check whether we have a file3 and an original subtitle
+			my $orig_subt = ( $fn3 and exists $srt3{ $sorder } ) ? $srt3{ $sorder }{'txt'} : '';
+
+			my $sorder_cell = '';
+
+			# if we have original subtitle, we will display it and it will have the sorder cell with the rowspan
+			if ( $orig_subt )
+			{
+				print <<"EOF";
+<tr>
+	<td rowspan="5">$sorder</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td><pre>|$orig_subt|</pre></td>
+</tr>
+EOF
+			}
+			# if we don't, the file1 row will have the sorder cell with the rowspan
+			else
+			{
+				$sorder_cell = qq{<td rowspan="4">$sorder</td>\n};
+			}
+
 			print <<"EOF";
 <tr>
-	<td rowspan="4">$sorder</td>
+	$sorder_cell
 	<td><input type="radio" name="version_$sorder" value="1" $file1_checked></td>
 	<td>File1: </td>
 	<td><pre>|$srt1->[$i]{'txt'}|</pre></td>
@@ -492,7 +623,7 @@ sub print_merge_form
 EOF
 
 			# display a 'Merge' button every four rows for convenience
-			print &merge_button( $d )  if ( $d % 4 == 0 );
+			print &merge_button()  if ( $d % 4 == 0 );
 
 			# stop displaying diffs, if we have a maximum and we have reached it
 			last  if ( $max_diffs and $d >= $max_diffs );
@@ -500,7 +631,7 @@ EOF
 	}
 
 	# print 'Merge' button on the bottom (but avoid two of them back to back)
-	print &merge_button( $d )  unless ( $d % 4 == 0 );
+	print &merge_button()  unless ( $d % 4 == 0 );
 
 	print "</table>\n";
 	print $q->end_form;
@@ -524,8 +655,6 @@ EOF
 # create string for merge button
 sub merge_button
 {
-	my ($button) = @_;
-
 	return <<"EOF";
 <tr><td colspan="4">
 	<input type="submit" value="Merge">
@@ -556,6 +685,31 @@ sub print_incomplete_export_form
 	print "</body>\n";
 }
 
+sub print_file3_form
+{
+	&print_tool_header();
+
+	my $skip_file3 = 1;
+	&print_project_header( $skip_file3 );
+
+	print "<br>\n";
+	print $q->start_form( 'POST', undef, 'multipart/form-data' );
+	print '<input type="hidden" name="step" value="submitfile3">', "\n";
+	print qq{<input type="hidden" name="project" value="$project">\n};
+	# default to hiding the diffs that already have merge choices
+	print '<input type="hidden" name="hide_merged" value="1">', "\n";
+	# default to showing a maximum of 25 diffs at a time
+	print '<input type="hidden" name="max_diffs" value="25">', "\n";
+
+	print 'File3: ', $q->filefield( 'file3', '', 75, 200 ), " &nbsp;(optional - English/original SRT)<br><br>\n";
+	print "Here you can submit File3 - the original (English) SRT. When File3 is submitted, you will see<br>
+		the original/English subtitle text with each diff (between File1 and File2).<br><br>\n";
+	print $q->submit( 'submit', 'Upload File3 and View Diffs' ), "<br><br>\n";
+	print $q->end_form;
+
+	print "</body>\n";
+}
+
 sub print_header
 {
 	print $q->header( -type => 'text/html', -charset => $encoding );
@@ -571,8 +725,10 @@ sub print_tool_header
 
 sub print_project_header
 {
+	my ($skip_file3) = @_;
+
 	print $q->h3( "Project: $project" );
-	&print_files_in_project();
+	&print_files_in_project( $skip_file3 );
 }
 
 sub export_final_project
