@@ -573,6 +573,7 @@ sub print_merge_form
 			my $donotmerge_checked = '';
 			$donotmerge_checked = 'checked' unless ( $file1_checked or $file2_checked or $custom_checked );
 			my $custom = ( $custom_checked ) ? $m->{'txt'} : '';
+			$custom = $q->escapeHTML( $custom )  if ( $custom );
 
 			# check whether we have a file3 and an original subtitle
 			my $orig_subt = ( $fn3 and exists $srt3{ $sorder } ) ? $srt3{ $sorder }{'txt'} : '';

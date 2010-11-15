@@ -247,7 +247,7 @@ sub refragment
 	return unless ( @frag_srts > 0 );
 
 	# strip out leading and trailing whitespace from the fragments
-#	$so->trim( $_->{'txt'} )  foreach ( @frag_srts );
+	$so->trim( $_->{'txt'} )  foreach ( @frag_srts );
 
 	my $last_index;
 
@@ -504,6 +504,8 @@ sub print_refragment_form
 	my $text = ( @$section_srts2 > 0 ) ?
 		join( ' ', map { $_->{'txt'} } @$section_srts2 ) :
 		'[ -- MISSING SUBTITLE -- ]';
+	$text = $q->escapeHTML( $text );
+
 
 	&print_tool_header();
 	&print_project_header();
@@ -537,6 +539,9 @@ the two SRT files. Synchronization removes tiny timestamp differences (less than
 	# print as many text boxes as the 'Reference SRT' file has for the fragment section
 	foreach my $s ( @$section_srts1 )
 	{
+		my $sub_txt = $s->{'txt'};
+		$sub_txt = $q->escapeHTML( $sub_txt );
+
 		print "<tr>\n";
 
 		# print this cell only for the first row (with rowspan for all rows)
@@ -552,7 +557,7 @@ the two SRT files. Synchronization removes tiny timestamp differences (less than
 	</td>
 	<td>
 		$s->{'t'}<br>
-		$s->{'txt'}
+		$sub_txt
 	</td>
 	<td align="center">$s->{'c'}</td>
 </tr>
