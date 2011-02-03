@@ -176,7 +176,7 @@ sub check_input_files
 sub check_input_file3
 {
 	my ($optional) = @_;
-	
+
 	# third file is optional check it only if one was submitted
 	$fn3 = $p->{'file3'};
 	$fn3 = ''  unless ( defined $fn3 );
@@ -527,7 +527,8 @@ sub print_merge_form
 	print qq{
 		In the diffs below, you can pick the version of the subtitle from File1, File2, enter a custom value<br>
 		or choose not to pick a version yet (no merge yet). Then, you click any 'Merge' button. You should<br>
-		click 'Merge' often (even before completely finished) because that is when your choices get saved.<br><br>
+		click 'Merge' often (even before completely finished) because that is when your choices get saved.<br>
+		The pipe characters '<b>|</b>' are not part of the subtitles, they are just to show white space at the edges.<br><br>
 	};
 
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
@@ -588,7 +589,7 @@ sub print_merge_form
 	<td rowspan="5">$sorder</td>
 	<td>&nbsp;</td>
 	<td>&nbsp;</td>
-	<td><pre>|$orig_subt|</pre></td>
+	<td><pre><b>|</b>$orig_subt<b>|</b></pre></td>
 </tr>
 EOF
 			}
@@ -603,12 +604,12 @@ EOF
 	$sorder_cell
 	<td><input type="radio" name="version_$sorder" value="1" $file1_checked></td>
 	<td>File1: </td>
-	<td><pre>|$srt1->[$i]{'txt'}|</pre></td>
+	<td><pre><b>|</b>$srt1->[$i]{'txt'}<b>|</b></pre></td>
 </tr>
 <tr>
 	<td><input type="radio" name="version_$sorder" value="2" $file2_checked></td>
 	<td>File2: </td>
-	<td><pre>|$srt2->[$i]{'txt'}|</pre></td>
+	<td><pre><b>|</b>$srt2->[$i]{'txt'}<b>|</b></pre></td>
 </tr>
 <tr>
 	<td><input type="radio" name="version_$sorder" value="3" $custom_checked></td>
