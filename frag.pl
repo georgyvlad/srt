@@ -37,7 +37,7 @@ my $project_random_range = 10_000;
 # age for data files when they become deletable
 my $max_datafile_age = ( 60 * 24 * 60 * 60 );	# 60 days ago
 # margin (in milliseconds) for considering timestamps equal
-my $eq_margin = 100;
+my $eq_margin = 300;
 
 my $q = CGI->new;
 my $p = $q->Vars;
@@ -500,8 +500,9 @@ sub print_refragment_form
 
 	# get the number of subtitles in the 'Refragment SRT' fragment section
 	my $s_size = scalar @$section_srts2;
+
 	# get the cumulative subtitle text for the 'Refragment SRT' fragment section
-	my $text = ( @$section_srts2 > 0 ) ?
+	my $text = ( $s_size > 0 ) ?
 		join( ' ', map { $_->{'txt'} } @$section_srts2 ) :
 		'[ -- MISSING SUBTITLE -- ]';
 	$text = $q->escapeHTML( $text );
@@ -511,18 +512,9 @@ sub print_refragment_form
 	&print_project_header();
 
 	print qq{
-Below is a section in the 'Refragment SRT' where it is fragmented differently from the 'Reference SRT'.<br>
-Here, you can take the subtitle text and split it up the same way. You have to take the whole subtitle<br>
-text displayed here and split it up into the text boxes provided. When you click 'Refragment',<br>
-the 'Refragment SRT' file will be modified with your new fragmentation. Also, all subtitles up to this<br>
-point will be synchronized with the 'Reference SRT' file. You will then see the next section where the<br>
-two files are fragmented differently.<br><br>
+Below is a section in the 'Refragment SRT' where the subtitles are fragmented differently from the 'Reference SRT'. The green textarea box contains all the text from the section. The table below it contains the fragmentation from the "Reference SRT" and empty boxes. You can cut (cut instead of copy will make your life easier) text from the green box and paste it into the boxes to refragment the text. When you click 'Refragment', the 'Refragment SRT' file will be modified with your new fragmentation. Also, all subtitles up to this point will be synchronized with the 'Reference SRT' file. You will then see the next section where the two files are fragmented differently.<br><br>
 
-At any time you can also click 'Export Refragmented File' to download the latest version of the 'Refragment SRT'<br>
-file. However, it is best to export after you have had a chance to also 'Synchronize Timestamps'. That<br>
-option is available to you only at the end, after you have resolved all fragmentation differences between<br>
-the two SRT files. Synchronization removes tiny timestamp differences (less than $eq_margin milliseconds).<br><br>
-
+At any time you can also click 'Export Refragmented File' to download the latest version of the 'Refragment SRT' file. However, it is best to export after you have had a chance to also 'Synchronize Timestamps'. That option is available to you only at the end, after you have resolved all fragmentation differences sections between the two SRT files. Synchronization removes tiny timestamp differences (less than $eq_margin milliseconds).<br><br>
 	};
 
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
@@ -532,8 +524,13 @@ the two SRT files. Synchronization removes tiny timestamp differences (less than
 <input type="hidden" name="section_start" value="$s_start">
 <input type="hidden" name="section_size" value="$s_size">
 
+<div style="position: fixed; bottom: 0px; left: 0px; z-index: 5; background-color: rgb(100, 200, 100);">
+<textarea name="dummy" rows="5" cols="80"
+	style="background: inherit;">$text</textarea>
+</div>
+
 <table border="1" cellpadding="5">
-<tr><th colspan="2">Refragment SRT</th><th>Reference SRT</th><th>Sub #</th></tr>
+<tr><th>Refragment SRT</th><th>Reference SRT</th><th>Sub #</th></tr>
 	};
 
 	# print as many text boxes as the 'Reference SRT' file has for the fragment section
@@ -542,18 +539,10 @@ the two SRT files. Synchronization removes tiny timestamp differences (less than
 		my $sub_txt = $s->{'txt'};
 		$sub_txt = $q->escapeHTML( $sub_txt );
 
-		print "<tr>\n";
-
-		# print this cell only for the first row (with rowspan for all rows)
-		if ( $text )
-		{
-			print qq{<td rowspan="$cnt">$text</td>\n};
-			$text = '';
-		}
-
 		print qq{
+	<tr>
 	<td>
-		<input type="text" name="fragment_$s->{'c'}" value="" size="50">
+		<input type="text" name="fragment_$s->{'c'}" value="" size="77">
 	</td>
 	<td>
 		$s->{'t'}<br>
@@ -565,6 +554,7 @@ the two SRT files. Synchronization removes tiny timestamp differences (less than
 	}
 
 	print "</table>\n<br>\n";
+
 	print $q->submit( 'submit', 'Refragment' ), "<br><br>\n";
 	print $q->end_form;
 
@@ -575,7 +565,8 @@ the two SRT files. Synchronization removes tiny timestamp differences (less than
 	print qq{<input type="hidden" name="project" value="$project">\n};
 	print $q->submit( 'submit', 'Export Refragmented File' ), "<br><br>\n";
 	print $q->end_form;
-	print "</body>\n"
+	print qq{<br><div style="height:400px;">&nbsp;</div><br>};
+	print "</body>\n";
 }
 
 sub print_sync_form
