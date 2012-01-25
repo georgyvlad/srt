@@ -22,6 +22,26 @@ sub new
 	bless $self, ref $class || $class;
 }
 
+sub separator
+{
+	my ($self, $content) = @_;
+
+	my ($sep, $cnt);
+	my $max_cnt = 0;
+
+	foreach my $csep ( "\xE2\x80\xA8", "\015\012", "\012\015", "\012", "\015" )
+	{
+		$cnt = $$content =~ s/$csep/$csep/g;
+		if ( $cnt > $max_cnt )
+		{
+			$sep = $csep;
+			$max_cnt = $cnt;
+		}
+	}
+
+	return $sep;
+}
+
 sub parse_file
 {
 	my ($self, $fh, $dfh) = @_;
@@ -35,19 +55,26 @@ sub parse_file
 	binmode $fh;
 	# optional output filehandle to save the file as we read it
 	binmode $dfh if ( defined $dfh );
+	local $/= undef;
+	my $content = <$fh>;
+	close $fh;
 
-	while ( my $line = <$fh> )
+	# special case for stripping out BOM in the beginning of the file
+	$content =~ s/^\xEF\xBB\xBF//;
+
+	# find out the newline separator
+	my $sep = $self->separator( \$content );
+
+	foreach my $line ( split( "$sep", $content )  )
 	{
-		# special case for stripping out the weird characters in the beginning of the file
-		$line =~ s/^\xEF\xBB\xBF//;
-
-		# just pass onto the output file, if we have one
-		print $dfh $line  if ( defined $dfh );
-
-		chomp $line;
+		$line = ''  unless ( defined $line );
+		$line =~ s/^\s+|\s+$//g;
 
 		# skip leading blank lines
 		next if ( not $started and $line eq '' );
+
+		# just pass onto the output file, if we have one
+		print $dfh $line, "\n"  if ( defined $dfh );
 
 		# the counter field
 		unless ( defined $c ) {
@@ -83,7 +110,6 @@ sub parse_file
 		}
 	}
 
-	close $fh;
 	close $dfh if ( defined $dfh );
 
 	# save the last subtitle
