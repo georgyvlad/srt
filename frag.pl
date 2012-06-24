@@ -5,7 +5,7 @@
 # versions of the same video (timestamps are identical) with very small differences.
 # The first SRT file serves as the base for comparison, and the second will be compared
 # and adjusted. We are looking for places where the two files differ in the way subtitles
-# were fragmented. Whe we find a place where the fragmentation differs, we show the fragment
+# were fragmented. When we find a place where the fragmentation differs, we show the fragment
 # with its text and the way it is broken up in the base file. We also give a few text
 # boxes to the user to allow him to split the file2 text into the same subtitles. The
 # process will be repeated until the two files' subtitles and timestamps are fragmented
@@ -426,7 +426,7 @@ sub find_fragmentation_diff
 sub equal
 {
 	my ($ts1, $ts2) = @_;
-	
+
 	my $t1 = $so->timestamp_as_num( $ts1 );
 	my $t2 = $so->timestamp_as_num( $ts2 );
 	return 0 unless ( defined $t1 and defined $t2 );
@@ -437,7 +437,7 @@ sub equal
 sub compare
 {
 	my ($ts1, $ts2) = @_;
-	
+
 	my $t1 = $so->timestamp_as_num( $ts1 );
 	my $t2 = $so->timestamp_as_num( $ts2 );
 	return 0 unless ( defined $t1 and defined $t2 );
@@ -512,10 +512,12 @@ sub print_refragment_form
 	&print_project_header();
 
 	print qq{
-Below is a section in the 'Refragment SRT' where the subtitles are fragmented differently from the 'Reference SRT'. The green textarea box contains all the text from the section. The table below it contains the fragmentation from the "Reference SRT" and empty boxes. You can cut (cut instead of copy will make your life easier) text from the green box and paste it into the boxes to refragment the text. When you click 'Refragment', the 'Refragment SRT' file will be modified with your new fragmentation. Also, all subtitles up to this point will be synchronized with the 'Reference SRT' file. You will then see the next section where the two files are fragmented differently.<br><br>
+Below is a section in the 'Refragment SRT' where the subtitles are fragmented differently from the 'Reference SRT'. The green textarea box contains all the text from the section. The table underneath it contains the fragmentation from the "Reference SRT" and empty boxes. You can cut (cut instead of copy will make your life easier) text from the green box and paste it into the boxes to refragment the text. Even easier way to do this is to click inside the green box in the position where the line should end, then press the "Enter" key, then click outside the green box - the line will automatically be cut/pasted in the first available empty box. After you have refragmented the text from the green box, click 'Refragment' - the 'Refragment SRT' file will be modified with your new fragmentation. Also, all subtitles up to this point will be synchronized with the 'Reference SRT' file. You will then see the next section where the two files are fragmented differently.<br><br>
 
 At any time you can also click 'Export Refragmented File' to download the latest version of the 'Refragment SRT' file. However, it is best to export after you have had a chance to also 'Synchronize Timestamps'. That option is available to you only at the end, after you have resolved all fragmentation differences sections between the two SRT files. Synchronization removes tiny timestamp differences (less than $eq_margin milliseconds).<br><br>
 	};
+
+	print_refrag_js();
 
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
 	print qq{
@@ -524,8 +526,8 @@ At any time you can also click 'Export Refragmented File' to download the latest
 <input type="hidden" name="section_start" value="$s_start">
 <input type="hidden" name="section_size" value="$s_size">
 
-<div style="position: fixed; bottom: 0px; left: 0px; z-index: 5; background-color: rgb(100, 200, 100);">
-<textarea name="dummy" rows="5" cols="80"
+<div style="position: fixed; bottom: 0px; left: 0px; z-index: 5; background-color: rgb(180, 250, 180);">
+<textarea id="boxtxt" name="dummy" rows="8" cols="80"
 	style="background: inherit;">$text</textarea>
 </div>
 
@@ -540,9 +542,9 @@ At any time you can also click 'Export Refragmented File' to download the latest
 		$sub_txt = $q->escapeHTML( $sub_txt );
 
 		print qq{
-	<tr>
+<tr class="datarow">
 	<td>
-		<input type="text" name="fragment_$s->{'c'}" value="" size="77">
+		<input type="text" name="fragment_$s->{'c'}" value="" size="77" class="sinput">
 	</td>
 	<td>
 		$s->{'t'}<br>
@@ -581,7 +583,7 @@ synchronize the timestamps from 'Reference SRT' file into the 'Refragment SRT' f
 can click 'Export' to download the final version of the 'Refragment SRT' file to your computer.<br><br>
 	};
 
-	# a separate form/button for export of the final version
+	# a separate form/button for synchronizing timestamps
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
 	print qq{
 <input type="hidden" name="step" value="sync">
@@ -620,4 +622,23 @@ sub export_refragmented_file
 		-attachment => $filename
 	);
 	print $file_txt;
+}
+
+sub print_refrag_js {
+
+	print << 'EOF';
+
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<script type="text/javascript" src="/js/frag.js"></script>
+
+<script type="text/javascript">
+
+$(document).ready( function() {
+	$('#boxtxt').change( box_cut_paste );
+});
+
+</script>
+
+EOF
+
 }

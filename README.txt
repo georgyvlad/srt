@@ -13,6 +13,9 @@ cp diff.pl /cgi-bin/srt/
 cp tmshift.pl /cgi-bin/srt/
 cp frag.pl /cgi-bin/srt/
 
+There is also a JavaScript file "frag.js" but if you don't install it users can still use the "frag" tool (just have to cut/paste, instead of press Enter). The JS file has to live in the webserver's "/js" path, so if the webserver's document root is something like "/www" you will need to copy it there:
+cp frag.js /www/js/
+
 No further configuration is needed. The utilities use the webserver's local file system to save their data. So, the first time data needs to be saved the tools will create their data directories in the same directory (in this case '/cgi-bin/srt'). The tools are smart enough to automatically erase older (2 month old at the moment) datafiles once in a while.
 
 You should be able to access the tools now like this:
