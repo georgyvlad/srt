@@ -528,7 +528,7 @@ sub print_merge_form
 		In the diffs below, you can pick the version of the subtitle from File1, File2, enter a custom value<br>
 		or choose not to pick a version yet (no merge yet). Then, you click any 'Merge' button. You should<br>
 		click 'Merge' often (even before completely finished) because that is when your choices get saved.<br>
-		The pipe characters '<b>|</b>' are not part of the subtitles, they are just to show white space at the edges.<br><br>
+		The pipe characters '<b>|</b>' are not part of the subtitles, they are just to show white space at the ends.<br><br>
 	};
 
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
@@ -552,7 +552,7 @@ sub print_merge_form
 	my $d = 0;
 	my $sorder;
 
-	foreach ( my $i = 0; $i < @$srt1; $i++ )
+	for ( my $i = 0; $i < @$srt1; $i++ )
 	{
 		# show only the subtitles that differ in their text
 		if ( $srt1->[$i]{'txt'} ne $srt2->[$i]{'txt'} )
