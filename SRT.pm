@@ -342,15 +342,15 @@ sub trim
 sub print_tools_menu
 {
 	print qq{
-<table border="0" cellpadding="2">
-<tr>
-	<td width="80"><a href="diff.pl">Diff</a></td>
-	<td width="100"><a href="tmshift.pl">Timeshift</a></td>
-	<td width="100"><a href="frag.pl">Refragment</a></td>
-	<td width="100"><a href="touchup.pl">Touchup</a></td>
-	<td width="100"><a href="feedback.pl">Feedback</a></td>
-</tr>
-</table>
+<style> span.menu span { margin-left: 30px; } </style>
+SRT tools:
+<span class="menu">
+	<span><a href="diff.pl">Diff</a></span>
+	<span><a href="frag.pl">Refragment</a></span>
+	<span><a href="touchup.pl">Touchup</a></span>
+	<span><a href="tmshift.pl">Timeshift</a></span>
+	<span><a href="feedback.pl">Feedback</a></span>
+</span>
 	};
 }
 

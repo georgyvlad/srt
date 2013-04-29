@@ -523,13 +523,16 @@ sub print_merge_form
 
 	&print_tool_header();
 	&print_project_header();
+	print "
+<style>
+	div.mergetable span { background-color: #EEEEEE; font-family: Courier; }
+	div.mergetable div { font-family: Courier; }
+</style>
 
-	print qq{
-		In the diffs below, you can pick the version of the subtitle from File1, File2, enter a custom value<br>
-		or choose not to pick a version yet (no merge yet). Then, you click any 'Merge' button. You should<br>
-		click 'Merge' often (even before completely finished) because that is when your choices get saved.<br>
-		The pipe characters '<b>|</b>' are not part of the subtitles, they are just to show white space at the ends.<br><br>
-	};
+In the diffs below, you can pick the version of the subtitle from File1, File2, enter a custom value<br>
+or choose not to pick a version yet (no merge yet). Then, you click any 'Merge' button. You should<br>
+click 'Merge' often (even before completely finished) because that is when your choices get saved.<br><br>
+	";
 
 	print $q->start_form( 'POST', undef, 'multipart/form-data' );
 	print qq{
@@ -542,6 +545,7 @@ sub print_merge_form
 
 		<h4>Diffs:</h4>
 
+		<div class="mergetable">
 		<table>
 	};
 
@@ -589,7 +593,7 @@ sub print_merge_form
 	<td rowspan="5">$sorder</td>
 	<td>&nbsp;</td>
 	<td>&nbsp;</td>
-	<td><pre><b>|</b>$orig_subt<b>|</b></pre></td>
+	<td><div>$orig_subt</div></td>
 </tr>
 EOF
 			}
@@ -604,12 +608,12 @@ EOF
 	$sorder_cell
 	<td><input type="radio" name="version_$sorder" value="1" $file1_checked></td>
 	<td>File1: </td>
-	<td><pre><b>|</b>$srt1->[$i]{'txt'}<b>|</b></pre></td>
+	<td><span>$srt1->[$i]{'txt'}</span></td>
 </tr>
 <tr>
 	<td><input type="radio" name="version_$sorder" value="2" $file2_checked></td>
 	<td>File2: </td>
-	<td><pre><b>|</b>$srt2->[$i]{'txt'}<b>|</b></pre></td>
+	<td><span>$srt2->[$i]{'txt'}</span></td>
 </tr>
 <tr>
 	<td><input type="radio" name="version_$sorder" value="3" $custom_checked></td>
@@ -635,7 +639,7 @@ EOF
 	# print 'Merge' button on the bottom (but avoid two of them back to back)
 	print &merge_button()  unless ( $d % 4 == 0 );
 
-	print "</table>\n";
+	print "</table>\n</div>\n";
 	print $q->end_form;
 
 	print "<br><hr><br>";
@@ -729,7 +733,7 @@ sub print_project_header
 {
 	my ($skip_file3) = @_;
 
-	print $q->h3( "Project: $project" );
+	print "Project: <a href='diff.pl?project=$project&max_diffs=25&hide_merged=1'>$project</a>";
 	&print_files_in_project( $skip_file3 );
 }
 
