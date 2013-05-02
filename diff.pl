@@ -39,8 +39,10 @@ my $p = $q->Vars;
 my ($fh1, $fh2, $fh3, $fn1, $fn2, $fn3, $srt1, $srt2, $srt3, %srt3, %srtm, $project);
 %srt3 = ();
 
+my $tn = 'diff.pl';	# the tool's name
 my $encoding = $p->{'encoding'};
 $encoding = 'utf8'  unless ( $encoding );		# 'iso-8859-1', 'utf8'
+$project = ( $p->{'project'} and $p->{'project'} =~ m/(\d+)/ ) ? $1 : '';
 
 # make sure our data dir exists and try to create it otherwise
 mkdir $data_dir  unless ( -d $data_dir );
@@ -54,7 +56,6 @@ $so->cleanup_project_data_files()  if ( int( rand( $cleanup_request_freq ) ) == 
 # the export happens before we print the header, so it can print its own
 if ( $p->{'step'} and $p->{'step'} eq 'export' )
 {
-	$project = $p->{'project'};
 	$so->error( 'No project specified for the export.', 1 )  unless ( $project );
 
 	&read_project_meta_file();
@@ -74,40 +75,25 @@ if ( $p->{'step'} and $p->{'step'} eq 'export' )
 # user wants to submit an optional third file
 if ( $p->{'step'} and $p->{'step'} eq 'file3form' )
 {
-	$project = $p->{'project'};
-
 	&read_project_meta_file();
-
 	&print_file3_form();
 }
 # user submitted an optional third file
 elsif ( $p->{'step'} and $p->{'step'} eq 'submitfile3' )
 {
-	$project = $p->{'project'};
-
 	&read_project_meta_file();
-
 	&submit_file3();
-
 	&read_project_master_file();
-
 	&parse_files();
-
 	&print_merge_form();
 }
 # user submits his merge input
 elsif ( $p->{'step'} and $p->{'step'} eq 'merge' )
 {
-	$project = $p->{'project'};
-
 	&read_project_meta_file();
-
 	&read_project_master_file();
-
 	&parse_files();
-
 	&merge_files();
-
 	&save_project_master_file();
 
 	# read the master file we just saved, so we can print the merge form with new values
@@ -120,17 +106,17 @@ elsif ( $p->{'step'} and $p->{'step'} eq 'myprojects' )
 {
 	&print_user_projects();
 }
+# form for external 'diffchecker' tool
+elsif ( $p->{'step'} and $p->{'step'} eq 'visualdiffs' )
+{
+	&print_visualdiffs_form();
+}
 # user wants to work on existing project
 elsif ( $p->{'project'} )
 {
-	$project = $p->{'project'};
-
 	&read_project_meta_file();
-
 	&read_project_master_file();
-
 	&parse_files();
-
 	&print_merge_form();
 }
 # user submits SRT files for the first time (project will be created)
@@ -142,7 +128,6 @@ elsif ( $p->{'file1'} )
 	$project = $so->get_new_project_name();
 
 	&submit_and_parse_files( $project );
-
 	&print_merge_form();
 }
 else
@@ -342,20 +327,10 @@ sub merge_files
 
 			my $custom = $p->{"custom_$sorder"};
 			$so->trim( $custom );
-			&strip_end_pipes( $custom );
 			$custom = ''  unless ( defined $custom );
 			$s->{'txt'} = $custom;
 		}
 	}
-}
-
-# some users don't remove the visual pipes we display (to show leading and trailing space)
-# this sub will remove them
-sub strip_end_pipes
-{
-   return unless ( defined $_[0] );
-
-   $_[0] =~ s/^\|+|\|+$//gs;
 }
 
 sub save_project_master_file
@@ -485,11 +460,11 @@ sub print_files_in_project
 {
 	my ($skip_file3) = @_;
 
-	print $q->h4( "SRT files in project:" );
-	print qq{
-		<b>File1:</b> $fn1 &nbsp;(Reference SRT)<br>
-		<b>File2:</b> $fn2<br>
-	};
+	print <<"EOF";
+<h4>SRT files in project:</h4>
+<b>File1:</b> $fn1 &nbsp;(Reference SRT)<br>
+<b>File2:</b> $fn2<br>
+EOF
 
 	return if ( $skip_file3 );
 
@@ -499,21 +474,24 @@ sub print_files_in_project
 	}
 	else
 	{
-		print qq{<table cellpadding="0" cellspacing="0"><tr>\n};
-		print qq{<td><b>File3:</b> (optional)&nbsp; &nbsp; </td>};
-		print "<td>\n";
-		print $q->start_form( 'POST', undef, 'multipart/form-data' );
-		print qq{<input type="hidden" name="project" value="$project">\n};
-		print '<input type="hidden" name="step" value="file3form">', "\n";
-		print $q->submit( 'submit', 'Add File3 (English/original SRT)' ), "<br>\n";
-		print "</form>\n";
-		print "</td></tr></table><br>\n";
+		print <<"EOF";
+<table cellpadding="0" cellspacing="0"><tr>
+<td><b>File3:</b> (optional)&nbsp; &nbsp; </td>
+<td>
+<form method="POST" action="$tn" enctype="multipart/form-data">
+<input type="hidden" name="project" value="$project">
+<input type="hidden" name="step" value="file3form">
+<input type="submit" value="Add File3 (English/original SRT)" name="submit"><br>
+</form>
+</td></tr></table><br>
+EOF
 	}
 }
 
 sub print_merge_form
 {
 	# see whether user doesn't want to see the diffs that have been merged already
+	$p->{'hide_merged'} = ( $p->{'hide_merged'} ) ? 1 : 0;
 	my $hide_merged_checked = ( $p->{'hide_merged'} ) ? 'checked' : '';
 	# see whether the user wants some maximum number of diffs to show at a time (make sure it's an integer)
 	my $max_diffs = $p->{'max_diffs'};
@@ -523,31 +501,55 @@ sub print_merge_form
 
 	&print_tool_header();
 	&print_project_header();
-	print "
+
+	# instructions and form for display options and redisplay
+	print <<"EOF";
 <style>
 	div.mergetable span { background-color: #EEEEEE; font-family: Courier; }
 	div.mergetable div { font-family: Courier; }
 </style>
 
-In the diffs below, you can pick the version of the subtitle from File1, File2, enter a custom value<br>
-or choose not to pick a version yet (no merge yet). Then, you click any 'Merge' button. You should<br>
+In the diffs below, you can pick the version of the subtitle from File1, File2, enter a custom value
+or choose not to pick a version yet (no merge yet). Then, you click any 'Merge' button. You should
 click 'Merge' often (even before completely finished) because that is when your choices get saved.<br><br>
-	";
 
-	print $q->start_form( 'POST', undef, 'multipart/form-data' );
-	print qq{
-		<input type="hidden" name="step" value="merge">
-		<input type="hidden" name="project" value="$project">
-		<input type="checkbox" name="hide_merged" value="1" $hide_merged_checked>
-			Hide merged diffs (uncheck this and click 'Merge' to see merged diffs as well)<br><br>
-		<input type="text" name="max_diffs" value="$max_diffs" size="2">
-			diffs maximum to display at a time (set to 0 and click 'Merge' for no limit)
+<form method="POST" action="$tn" enctype="multipart/form-data">
+<input type="hidden" name="project" value="$project">
+<div style="float: left">
+<input type="checkbox" name="hide_merged" value="1" $hide_merged_checked>
+	<span>Hide merged diffs (uncheck this and click 'Redisplay' to see merged diffs as well)</span><br>
+<input type="text" name="max_diffs" value="$max_diffs" size="2">
+	<span>diffs maximum to display at a time (set to 0 and click 'Redisplay' for no limit)</span>
+</div>
+<div style="float: left; margin-left: 30px;">
+<input type="submit" value="Redisplay">
+</div>
+<br clear="all"><br>
+</form>
+EOF
 
-		<h4>Diffs:</h4>
+	# form for visual text diffs (external tool)
+	print <<"EOF";
+<form method="POST" action="$tn" enctype="multipart/form-data" target="_blank">
+<input type="hidden" name="project" value="$project">
+<input type="hidden" name="step" value="visualdiffs">
+<input type="submit" value="View Visual Text Diffs"> (external "diffchecker" tool - opens in new window)
+</form>
+EOF
 
-		<div class="mergetable">
-		<table>
-	};
+	# merge form
+	print <<"EOF";
+<form method="POST" action="$tn" enctype="multipart/form-data">
+<input type="hidden" name="step" value="merge">
+<input type="hidden" name="project" value="$project">
+<input type="hidden" name="hide_merged" value="$p->{hide_merged}">
+<input type="hidden" name="max_diffs" value="$max_diffs">
+
+<h4>Diffs:</h4>
+
+<div class="mergetable">
+<table>
+EOF
 
 	# display a 'Merge' button on top
 	print &merge_button();
@@ -639,23 +641,24 @@ EOF
 	# print 'Merge' button on the bottom (but avoid two of them back to back)
 	print &merge_button()  unless ( $d % 4 == 0 );
 
-	print "</table>\n</div>\n";
-	print $q->end_form;
-
-	print "<br><hr><br>";
+	print "</table>\n</div>\n</form>\n<br><hr><br>\n";
 
 	# a separate form/button for export of the final version
-	print $q->start_form( 'POST', undef, 'multipart/form-data' );
-	print qq{<input type="hidden" name="step" value="export">\n};
-	print qq{<input type="hidden" name="project" value="$project">\n};
-	print $q->submit( 'submit', 'Export' ), "<br><br>\n";
-	print $q->end_form;
+	print <<"EOF";
+<form method="POST" action="$tn" enctype="multipart/form-data">
+<input type="hidden" name="step" value="export">
+<input type="hidden" name="project" value="$project">
+<input type="submit" value="Export" name="submit"><br><br>
+</form>
+EOF
 
 	# a separate form/button for starting a new project
-	print $q->start_form( 'POST', undef, 'multipart/form-data' );
-	print $q->submit( 'submit', 'Start New Project' ), "<br><br>\n";
-	print $q->end_form;
-	print "</body>\n"
+	print <<"EOF";
+<form method="POST" action="$tn" enctype="multipart/form-data">
+<input type="submit" value="Start New Project" name="submit"><br><br>
+</form>
+</body>
+EOF
 }
 
 # create string for merge button
@@ -669,26 +672,27 @@ EOF
 
 }
 
+# a form for export of the incomplete version
 sub print_incomplete_export_form
 {
 	&print_tool_header();
 	&print_project_header();
-	print qq{
-		You are trying to export a project where not all diffs have been resolved!<br><br>
 
-		If you want, you can export the incomplete version. All diffs you have resolved will go through.<br>
-		For the ones you have not resolved, the version from File1 will be used.<br><br>
-	};
+	print <<"EOF";
+You are trying to export a project where not all diffs have been resolved!<br><br>
 
-	# a form/button for export of the incomplete version
-	print $q->start_form( 'POST', undef, 'multipart/form-data' );
-	print qq{<input type="hidden" name="step" value="export">\n};
-	print qq{<input type="hidden" name="incomplete_export" value="1">\n};
-	print qq{<input type="hidden" name="project" value="$project">\n};
-	print $q->submit( 'submit', 'Export Incomplete Version' ), "<br><br>\n";
-	print $q->end_form;
+If you want, you can export the incomplete version. All diffs you have resolved will go through.<br>
+For the ones you have not resolved, the version from File1 will be used.<br><br>
 
-	print "</body>\n";
+<form method="POST" action="$tn" enctype="multipart/form-data">
+<input type="hidden" name="step" value="export">
+<input type="hidden" name="project" value="$project">
+<input type="hidden" name="incomplete_export" value="1">
+<input type="submit" value="Export Incomplete Version" name="submit"><br><br>
+</form>
+</body>
+EOF
+
 }
 
 sub print_file3_form
@@ -698,22 +702,53 @@ sub print_file3_form
 	my $skip_file3 = 1;
 	&print_project_header( $skip_file3 );
 
-	print "<br>\n";
-	print $q->start_form( 'POST', undef, 'multipart/form-data' );
-	print '<input type="hidden" name="step" value="submitfile3">', "\n";
-	print qq{<input type="hidden" name="project" value="$project">\n};
 	# default to hiding the diffs that already have merge choices
-	print '<input type="hidden" name="hide_merged" value="1">', "\n";
 	# default to showing a maximum of 25 diffs at a time
-	print '<input type="hidden" name="max_diffs" value="25">', "\n";
+	print <<"EOF";
+<br>
 
-	print 'File3: ', $q->filefield( 'file3', '', 75, 200 ), " &nbsp;(optional - English/original SRT)<br><br>\n";
-	print "Here you can submit File3 - the original (English) SRT. When File3 is submitted, you will see<br>
-		the original/English subtitle text with each diff (between File1 and File2).<br><br>\n";
-	print $q->submit( 'submit', 'Upload File3 and View Diffs' ), "<br><br>\n";
-	print $q->end_form;
+<form method="POST" action="$tn" enctype="multipart/form-data">
+<input type="hidden" name="step" value="submitfile3">
+<input type="hidden" name="project" value="$project">
+<input type="hidden" name="hide_merged" value="1">
+<input type="hidden" name="max_diffs" value="25">
+File3: 
+<input type="file" maxlength="200" size="75" name="file3">
+&nbsp;(optional - English/original SRT)<br><br>
+Here you can submit File3 - the original (English) SRT. When File3 is submitted, you will see<br>
+the original/English subtitle text with each diff (between File1 and File2).<br><br>
+<input type="submit" value="Upload File3 and View Diffs" name="submit"><br><br>
+</form>
+</body>
+EOF
 
-	print "</body>\n";
+}
+
+sub print_visualdiffs_form
+{
+	&read_project_meta_file();
+	&read_project_master_file();
+	&parse_files();
+	my $file1_content = join( "\n", map { $_->{'txt'} } @$srt1 );
+	my $file2_content = join( "\n", map { $_->{'txt'} } @$srt2 );
+
+	&print_tool_header();
+	&print_project_header();
+	print <<"EOF";
+In the boxes below is only the text from the two SRT files. When you click "Find Difference!",
+you will be directed to an external tool "diffchecker" that will show the text differences
+in a nice visual way.
+<br><br>
+
+<form enctype="multipart/form-data" method="post" action="http://www.diffchecker.com/diff" name="diffform">
+<textarea name="file1" rows="10" cols="40">$file1_content</textarea>
+<textarea name="file2" rows="10" cols="40">$file2_content</textarea>
+<br>
+<input type="hidden" name="storage-options" value="no"/>
+<input type="submit" value="Find Difference!" />
+</form>
+EOF
+
 }
 
 sub print_header
@@ -733,7 +768,7 @@ sub print_project_header
 {
 	my ($skip_file3) = @_;
 
-	print "Project: <a href='diff.pl?project=$project&max_diffs=25&hide_merged=1'>$project</a>";
+	print "Project: <a href='$tn?project=$project&max_diffs=25&hide_merged=1'>$project</a>";
 	&print_files_in_project( $skip_file3 );
 }
 
