@@ -37,7 +37,7 @@ my $project_random_range = 10_000;
 # age for data files when they become deletable
 my $max_datafile_age = ( 60 * 24 * 60 * 60 );	# 60 days ago
 # margin (in milliseconds) for considering timestamps equal
-my $eq_margin = 300;
+my $eq_margin = 600;
 
 my $q = CGI->new;
 my $p = $q->Vars;
@@ -512,7 +512,7 @@ sub print_refragment_form
 	&print_project_header();
 
 	print qq{
-Below is a section in the 'Refragment SRT' where the subtitles are fragmented differently from the 'Reference SRT'. The green textarea box contains all the text from the section. The table underneath it contains the fragmentation from the "Reference SRT" and empty boxes. You can cut (cut instead of copy will make your life easier) text from the green box and paste it into the boxes to refragment the text. Even easier way to do this is to click inside the green box in the position where the line should end, then press the "Enter" key, then click outside the green box - the line will automatically be cut/pasted in the first available empty box. After you have refragmented the text from the green box, click 'Refragment' - the 'Refragment SRT' file will be modified with your new fragmentation. Also, all subtitles up to this point will be synchronized with the 'Reference SRT' file. You will then see the next section where the two files are fragmented differently.<br><br>
+If you scroll down (the green box may be hiding it) you will see a section in the 'Refragment SRT' where the subtitles are fragmented differently from the 'Reference SRT'. The green textarea box contains all the text from the section. The table underneath it contains the fragmentation from the 'Reference SRT' and empty boxes. You can cut (cut instead of copy will make your life easier) text from the green box and paste it into the boxes to refragment the text. Even easier way to do this is to click inside the green box in the position where the line should end, then press the "Enter" key - the line will automatically be cut/pasted in the first available empty box. After you have refragmented the text from the green box, click 'Refragment' - the 'Refragment SRT' file will be modified with your new fragmentation. Also, all subtitles up to this point will be synchronized with the 'Reference SRT' file. You will then see the next section where the two files are fragmented differently.<br><br>
 
 At any time you can also click 'Export Refragmented File' to download the latest version of the 'Refragment SRT' file. However, it is best to export after you have had a chance to also 'Synchronize Timestamps'. That option is available to you only at the end, after you have resolved all fragmentation differences sections between the two SRT files. Synchronization removes tiny timestamp differences (less than $eq_margin milliseconds).<br><br>
 	};
@@ -527,7 +527,7 @@ At any time you can also click 'Export Refragmented File' to download the latest
 <input type="hidden" name="section_size" value="$s_size">
 
 <div style="position: fixed; bottom: 0px; left: 0px; z-index: 5; background-color: rgb(180, 250, 180);">
-<textarea id="boxtxt" name="dummy" rows="8" cols="80"
+<textarea id="boxtxt" name="dummy" rows="4" cols="80"
 	style="background: inherit;">$text</textarea>
 </div>
 
@@ -629,12 +629,12 @@ sub print_refrag_js {
 	print << 'EOF';
 
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
-<script type="text/javascript" src="/js/frag.js"></script>
+<script type="text/javascript" src="/js/frag.js?v=2"></script>
 
 <script type="text/javascript">
 
 $(document).ready( function() {
-	$('#boxtxt').change( box_cut_paste );
+	$('#boxtxt').keypress( box_cut_paste );
 });
 
 </script>

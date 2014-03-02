@@ -1,22 +1,34 @@
-function box_cut_paste() {
-	var box = $('#boxtxt').val();
-	var upd = 0;
+function box_cut_paste( e ) {
+	// we only care when Enter key is pressed
+	if ( e.which != 13 ) { return; }
 
-	// replace possible leading newline chars
-	if ( box.match( /^\s+/ ) ) {
-		box = box.replace( /^\s+/, '' );
-		upd = 1;
+	// prevent Enter key from inserting newline in the textbox
+	e.preventDefault();
+
+	var b = $('#boxtxt').get(0);
+	var box = b.value;
+	var pos = 0;
+
+	// get cursor position at moment of keypress (browswer specific)
+	if ( 'selectionStart' in b ) {
+		pos = b.selectionStart;
+	} else if ( 'selection' in document ) {
+		// old IE crap here
+		b.focus();
+		var sel = document.selection.createRange();
+		var slen = document.selection.createRange().text.length;
+		sel.moveStart( 'character', -b.value.length );
+		pos = sel.text.length - slen;
 	}
 
-	// grab the first line and remove it
-	var ln = box.match( /^([^\n\r]+)[\n\r]+/ );
-	if ( !( ln === null )  ) {
-		ln = ln[0];
-		box = box.replace( /^.+[\n\r]+\s*/, '' );
-		upd = 1;
-	}
+	// split the box text into line and rest based on pos
+	var ln = box.substr(0, pos);
+	ln = ln.replace( /^\s+|\s+$/gm, '' );
 
-	// check each table row
+	var rest = box.substr(pos);
+	rest = rest.replace( /^\s+|\s+$/gm, '' );
+
+	// find the first empty input and stick line there
 	$('.datarow :text.sinput').each( function (){
 		var s = $(this);
 		var found = 0;
@@ -29,19 +41,16 @@ function box_cut_paste() {
 		if ( found ) { return false }
 	});
 
-	// need to update the box
-	if ( upd == 1 ) {
-		$('#boxtxt').val( box );
+	// update the box
+	b.value = rest;
 
-		// position cursor in front
-		var b = $('#boxtxt').get(0);
-		if ( b.createTextRange ) {
-			var part = b.createTextRange();
-			part.moveat("character", 0);
-			part.moveEnd("character", 0);
-			part.select();
-		} else if ( b.setSelectionRange ){
-			b.setSelectionRange(0, 0);
-		}
+	// position cursor in front
+	if ( b.createTextRange ) {
+		var part = b.createTextRange();
+		part.moveat("character", 0);
+		part.moveEnd("character", 0);
+		part.select();
+	} else if ( b.setSelectionRange ){
+		b.setSelectionRange(0, 0);
 	}
 }
